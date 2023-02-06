@@ -4,7 +4,9 @@ import dht11
 from confluent_kafka import Producer
 from dotenv import load_dotenv
 import os
+import datetime
 import pymongo
+from dateutil.parser import parse
 
 # read data using pin 11
 instance = dht11.DHT11(pin = 11)
@@ -26,6 +28,9 @@ client = pymongo.MongoClient(os.getenv("MONGO_STRING"))
 db = client["plant-profile"]
 collection = db["profile"]
 
+myquery = { "_id": 1 }
+
+
 # Find a specific profile in the collection and sets it to the profile variable
 profile = collection.find_one({"_id": 1})
 print(profile)
@@ -44,6 +49,14 @@ p = Producer({
     }
   )
 
+def watering():
+  GPIO.output(18, 0)
+  sleep(4)
+  GPIO.output(18, 1)
+  newvalues = { "$set": { "date-last-watered": datetime.datetime.now().date().strftime('%d-%m-%Y') } }
+  collection.update_one(myquery, newvalues)
+
+
 #Prints confirmed/failed produced messages
 def delivery_report(err, msg):
   """ Called once for each message produced to indicate delivery result.
@@ -60,12 +73,17 @@ def callback(channel):
         else:
                 GPIO.output(18, 1)
 
- 
-GPIO.add_event_detect(channel, GPIO.BOTH, bouncetime=100)  # let us know when the pin goes HIGH or LOW
-GPIO.add_event_callback(channel, callback)  # assign function to GPIO PIN, Run function on change
+#If the plant profile is set to moisture, the script will water the plant based on soil moisture
+if profile.get("watering-type") == "moisture":
+  GPIO.add_event_detect(channel, GPIO.BOTH, bouncetime=100)  # let us know when the pin goes HIGH or LOW
+  GPIO.add_event_callback(channel, callback)  # assign function to GPIO PIN, Run function on change
+       
+if profile.get("watering-type") == "weekly":
+  watering()
 
 #An infinite loop runs that will get a reading of the humidity and temperature every 10 seconds and allow the callback function to run.
 #Produces humididity and temperature data to the kafka instance
+
 while True:
     result = instance.read()
     newTemp = "Temperature: %-3.1f C" % result.temperature
