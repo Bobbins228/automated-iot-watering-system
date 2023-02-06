@@ -1,15 +1,11 @@
-#import the GPIOS library
 import RPi.GPIO as GPIO
-#import the time library
 from time import sleep
-#import the dht11 library
 import dht11
-#import confluent kafka library
 from confluent_kafka import Producer
-#import load_dotenv from dotenv library
 from dotenv import load_dotenv
-#import os
 import os
+import pymongo
+
 # read data using pin 11
 instance = dht11.DHT11(pin = 11)
 #The channel for the Moisture detector
@@ -25,6 +21,14 @@ GPIO.setup(channel, GPIO.IN)
  
 load_dotenv(".env")
 
+#Connect to Mongo Atlas and set the database to plant-profile and collection to profile
+client = pymongo.MongoClient(os.getenv("MONGO_STRING"))
+db = client["plant-profile"]
+collection = db["profile"]
+
+# Find a specific profile in the collection and sets it to the profile variable
+profile = collection.find_one({"_id": 1})
+print(profile)
 #Gathers sensitive data from the .env file
 bootstrap_server = os.getenv("BOOTSTRAP_SERVER")
 sasl_user_name = os.getenv("CLIENT_ID")
