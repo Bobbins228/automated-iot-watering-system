@@ -7,6 +7,7 @@ import os
 import datetime
 import pymongo
 from dateutil.parser import parse
+import schedule
 
 # read data using pin 11
 instance = dht11.DHT11(pin = 11)
@@ -33,7 +34,7 @@ myquery = { "_id": 1 }
 
 # Find a specific profile in the collection and sets it to the profile variable
 profile = collection.find_one({"_id": 1})
-print(profile)
+
 #Gathers sensitive data from the .env file
 bootstrap_server = os.getenv("BOOTSTRAP_SERVER")
 sasl_user_name = os.getenv("CLIENT_ID")
@@ -49,6 +50,7 @@ p = Producer({
     }
   )
 
+#Watering function will water the plants for 4 seconds and update the last date watered on the plant profile
 def watering():
   GPIO.output(18, 0)
   sleep(4)
@@ -70,21 +72,31 @@ def delivery_report(err, msg):
 def callback(channel):
         if GPIO.input(channel):
                 GPIO.output(18, 0)
+                newvalues = { "$set": { "date-last-watered": datetime.datetime.now().date().strftime('%d-%m-%Y') } }
+                collection.update_one(myquery, newvalues)
         else:
                 GPIO.output(18, 1)
+                
 
 #If the plant profile is set to moisture, the script will water the plant based on soil moisture
 if profile.get("watering-type") == "moisture":
   GPIO.add_event_detect(channel, GPIO.BOTH, bouncetime=100)  # let us know when the pin goes HIGH or LOW
   GPIO.add_event_callback(channel, callback)  # assign function to GPIO PIN, Run function on change
-       
+
+#Schedule will run the watering function every monday
 if profile.get("watering-type") == "weekly":
-  watering()
+  schedule.every().monday.do(watering)
+
+#Schedule will run the watering function every 2 weeks
+if profile.get("watering-type") == "bi-weekly":
+  schedule.every(2).weeks.do(watering)
 
 #An infinite loop runs that will get a reading of the humidity and temperature every 10 seconds and allow the callback function to run.
 #Produces humididity and temperature data to the kafka instance
 
 while True:
+    #Run scheduled watering
+    schedule.run_pending()
     result = instance.read()
     newTemp = "Temperature: %-3.1f C" % result.temperature
     newHumidity = "Humidity: %-3.1f %%" % result.humidity
