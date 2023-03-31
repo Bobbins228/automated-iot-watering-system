@@ -11,3 +11,6 @@ Using the watering system Alexa skill a user can ask it questions like "When did
 Raspberry Pi, Python, Flask, Kubernetes, Docker, Mongo, Apache Kafka, HTML, Alexa
 ### Related Repositories
 [watering system web app](https://github.com/Bobbins228/watering-system-web-app)<br> [Alexa Water Bot Skill](https://github.com/Bobbins228/alexa-watering-bot-skill)
+
+## Project Poster
+<img title="FYP Poster" alt="Poster for final year project" src="https://res.cloudinary.com/dtstgkwxx/image/upload/v1680263599/poster_mark_campbell_olo4vq.png">
