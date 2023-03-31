@@ -85,15 +85,19 @@ if profile.get("watering-type") == "moisture":
 
 #Schedule will run the watering function every monday
 if profile.get("watering-type") == "weekly":
+  print("Watering set to every Monday")
   schedule.every().monday.do(watering)
 
 #Schedule will run the watering function every 2 weeks
 if profile.get("watering-type") == "bi-weekly":
+  print("watering set to every second Monday")
   schedule.every(2).weeks.do(watering)
 
 #An infinite loop runs that will get a reading of the humidity and temperature every 10 seconds and allow the callback function to run.
 #Produces humididity and temperature data to the kafka instance
-
+x = 0
+oldTemp = "Temperature: 18.5 C"
+oldHumidity = "Humidity: 51.0 %"
 while True:
     #Run scheduled watering
     schedule.run_pending()
@@ -105,7 +109,17 @@ while True:
         newHumidity = oldHumidity
     else:
         oldTemp = newTemp
-        oldHumidity = newHumidity   
+        oldHumidity = newHumidity  
+
+    # The system will update the temperature and humidity values on the plant profile every minute
+    if (x < 5):
+      x = x + 1
+    elif (x == 5):
+      newTempValues = { "$set": { "temperature": "%s"%newTemp } }
+      collection.update_one(myquery, newTempValues)
+      newHumidityValues = { "$set": { "humidity": "%s"%newHumidity } }
+      collection.update_one(myquery, newHumidityValues)
+      x = 0 
     
     p.poll(0)
     # Asynchronously produce a message. The delivery report callback will
